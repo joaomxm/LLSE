@@ -1,5 +1,6 @@
 [bits 16]
-[org 0x7E00]
+global start                
+extern kernel_main
 
 start:
     ; Configurar os segmentos  e a pilha 
@@ -152,6 +153,8 @@ init_32bit:
     ; Escrever algo diretamente na tela para testar!
     ; Em 32 bits não temos 'int 10h', escrevemos direto na memória de vídeo (0xB8000)
     mov dword [0xb8000], 0x0a4b0a4f
+
+    call kernel_main
 
     .freeze:
         hlt          ; Coloca a CPU em estado de "dormir" (Halt) até receber um sinal externo
