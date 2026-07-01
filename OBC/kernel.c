@@ -6,6 +6,139 @@
 
 int cursor_x;
 int cursor_y;
+/*
+=============================================================================
+FUNÇÕES DE PORTA I/O (Conversa direta com os Chips)
+=============================================================================
+
+Função que envia um byte para a porta de de hardware (I/O)
+outb %0, %1 -> intrucao de maquina para enviar o dado %0 para a porta %1
+ : : "a"(data), "Nd"(port) ->coloca o conteudo de data no registrado AL e o numero da porta no regeistrador de hardware
+*/
+
+void outb(unsigned short port, unsigned char data)
+{
+    __asm__ volatile("outb %0, %1" : : "a"(data), "Nd"(port));
+}
+
+// Função que escuta e retorna um byte que o chip de hardware deicou em uma porta especifica.
+unsigned char inb(unsigned short port)
+{
+    unsigned char result;
+    __asm__ volatile("inb %1, %0" : "=a"(result) : "Nd"(port));
+    return result;
+}
+
+/*
+=============================================================================
+ESTRUTURAS DA IDT (Tabela de Interrupções)
+=============================================================================
+
+IDT - Interrupt Descriptor Table, tabela fisica na memoria RAM que contem 256 entradas (Gates/Portoes),
+Cada entrada é uma estrutura de 8bytes que aponta para o endereco de uma funcao na memoria,
+Quando acontece uma Interrupção (erro divisao por zero, tecla pressionada...),
+a CPU usa o numero da interrupcao como indice nessa tabela para salta direto para a funcao correspondente.
+
+- Offset (Bits 0-15 e 16-31): O endereço de memória da função em C que vai tratar a interrupção. Ele fica dividido em duas partes na estrutura por motivos históricos de compatibilidade.
+- Selector (Bits 16-31): O segmento de código da GDT (o nosso CODE_SEG do Stage 2).
+- Flags (Bits 40-47): Define se o portão está ativo, o nível de privilégio (Ring 0) e o tipo de portão (geralmente 0x8E para portões de interrupção de 32 bits).
+*/
+
+// Define uma entrada (Gate) da IDT de exatamente 8 bytes
+struct idt_entry_struct
+{
+    unsigned short offset_1; // Bits 0-15 do endereço da função
+    unsigned short selector; // Seletor de segmento de código da GDT (CODE_SEG)
+    unsigned char zero;      // Este byte sempre deve ser 0
+    unsigned char flags;     // Atributos de tipo e privilégio
+    unsigned short offset_2; // Bits 16-31 do endereço da função
+} __attribute__((packed));   // 'packed' impede o compilador de otimizar o tamanho
+
+// Define o ponteiro descritor que a CPU usa para ler a IDT (semelhante à GDT)
+struct idt_ptr_struct
+{
+    unsigned short limit;
+    unsigned int base;
+} __attribute((packed));
+
+// Cria a tabela IDT com espaço para todas as 256 interrupções possíveis
+struct idt_entry_struct idt[256];
+struct idt_ptr_struct idt_ptr;
+
+/*
+=============================================================================
+REPROGRAMAÇÃO DO CHIP PIC 8259
+=============================================================================
+
+PIC 8259 - gerencia as interrupcoes externas de hardware.
+IRQs -> Interrupts Requests
+Função para reprogramar os vetores de interrupcao deslocando as IRQs de hardware para comecar a partir do vetor 0x20 (32) em diante,
+No modo protegido a Inter reserva 0 a 31 exclusivamente para Excecoes do Processador
+*/
+void pic_reprogram()
+{
+    // ICW1 - Inicialização do PIC Master e Slave
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+
+    // ICW2 - Mapeia o vetor de destino das IRQs
+    outb(0x21, 0x20); // Master começa em 0x20 (Interrupção 32 decimal)
+    outb(0xA1, 0x28); // Slave começa em 0x28 (Interrupção 40 decimal)
+
+    // ICW3 - Configura a conexão em cascata entre os dois chips
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+
+    // ICW4 - Define o modo de operação (Modo 8086)
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+
+    // Ativa apenas o Relógio (IRQ0) e o Teclado (IRQ1), mascarando/desativando o resto
+    // Bit 0 = IRQ0, Bit 1 = IRQ1. O valor 0 ativa e 1 desativa.
+    // 0xFC em binário é 11111100 (Ativa bits 0 e 1, desativa do 2 ao 7)
+    outb(0x21, 0xFC);
+    outb(0xA1, 0xFF); // Desativa todas as IRQs do Slave
+}
+
+/*
+=============================================================================
+CONFIGURAÇÃO DA IDT
+=============================================================================
+
+Função idt_set_gate
+- num: Qual a linha da tabela (ex: linha 33 para o teclado).
+- base: O endereço de memória real da função que vai tratar o teclado.
+- sel: O segmento de código da GDT (CODE_SEG).
+- flags: Permissões de segurança (geralmente 0x8E, que significa "Portão ativo de 32 bits em nível de Kernel").
+*/
+
+void idt_set_gate(unsigned char num, unsigned int base, unsigned short sel, unsigned char flags)
+{
+    idt[num].offset_1 = base & 0xFFFF; // Pega apenas os 16 bits finais do endereço e guarda na primeira gaveta.
+    idt[num].selector = sel;
+    idt[num].zero = 0;
+    idt[num].flags = flags;
+    idt[num].offset_2 = (base >> 16) & 0xFFFF; // Empurra o endereço 16 bits para a direita para pegar a metade inicial dele e guarda na segunda gaveta.
+}
+
+// Registrador interno da CPU precisa receber o ponteiro da IDT via comando Assembly lidt
+void idt_init()
+{
+    idt_ptr.limit = (sizeof(struct idt_entry_struct) * 256) - 1; // Calcula o tamanho exato da tabela na memória (8 bytes por linha $\times$ 256 linhas $- 1$).
+    idt_ptr.base = (unsigned int)&idt;                           // Pega o endereço da tabela idt começa na memória RAM.
+
+    // Comando do compilador para carregar a tabela na CPU
+    // lidt -> instrução Assembly nativa (Load Interrupt Descriptor Table)
+    // Pega esse ponteiro descritor e injeta diretamente no coração do processador
+    // CPU passa a usar a tabela em C para gerenciar o hardware
+    __asm__ volatile("lidt %0" : : "m"(idt_ptr));
+}
+
+/*
+=============================================================================
+DRIVERS DE VIDEO - VGA
+=============================================================================
+*/
 
 void clear_screen()
 {
@@ -67,16 +200,30 @@ void print_string(const char *str)
     }
 }
 
+/*
+=============================================================================
+FUNÇÃO PRINCIPAL - SISTEMA
+=============================================================================
+*/
+
 void kernel_main()
 {
     clear_screen();
 
-    print_char('C');
-    print_char(' ');
-    print_string("Teste String");
+    print_string("Iniciando subsistema de interrucoes...\n");
+
+    // 1. Reprograma o chip controlador para não conflitar com a CPU
+    pic_reprogram();
+    print_string("-> PIC 8259 reprogramado com sucesso.\n");
+
+    // 2. Inicializa a tabela estruturada na memória
+    idt_init();
+    print_string("-> IDT carregada no processador.\n\n");
+
+    print_string("Sistema preparado! Aguardando mapeamento dos Handlers.");
 
     while (1)
     {
-        // Loop infinito
+        __asm__ volatile("hlt");
     }
 }
