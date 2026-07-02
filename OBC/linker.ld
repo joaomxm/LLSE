@@ -7,18 +7,23 @@ SECTIONS
     . = 0x7E00;
 
     /* Primeiro, coloca o código de boot do Stage 2 */
-    .text : {
+    .text : ALIGN(16){
         *(.text)
     }
-
-    /* Em seguida, as tabelas e dados */
-    .data : {
-        *(.data)
+    
+    .rodata : ALIGN(16){
         *(.rodata)
     }
 
+    /* Em seguida, as tabelas e dados */
+    .data : ALIGN(16){
+        *(.data)
+
+    }
+
     /* Por fim, variáveis globais não inicializadas */
-    .bss : {
+    .bss : ALIGN(16){
+        *(COMMON)
         *(.bss)
     }
 }

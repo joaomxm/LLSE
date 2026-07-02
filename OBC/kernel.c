@@ -140,6 +140,99 @@ HANDLER DO TECLADO
 =============================================================================
 */
 
+const char keyboard_map[128] = {
+    0,
+    27,
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8', /* 0-9 */
+    '9',
+    '0',
+    '-',
+    '=',
+    '\b', /* Backspace */
+    '\t', /* Tab */
+    'q',
+    'w',
+    'e',
+    'r', /* 16-19 */
+    't',
+    'y',
+    'u',
+    'i',
+    'o',
+    'p',
+    '[',
+    ']',
+    '\n', /* Enter */
+    0,    /* 29   - Control */
+    'a',
+    's',
+    'd',
+    'f',
+    'g',
+    'h',
+    'j',
+    'k',
+    'l',
+    ';', /* 30-39 */
+    '\'',
+    '`',
+    0, /* Left shift */
+    '\\',
+    'z',
+    'x',
+    'c',
+    'v',
+    'b',
+    'n',
+    'm',
+    ',',
+    '.', /* 40-49 */
+    '/',
+    0, /* Right shift */
+    '*',
+    0,   /* Alt */
+    ' ', /* Space bar */
+    0,   /* Caps lock */
+    0,   /* 59 - F1 key ... > */
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0, /* < ... F10 */
+    0, /* 69 - Num lock*/
+    0, /* Scroll Lock */
+    0, /* Home key */
+    0, /* Up Arrow */
+    0, /* Page Up */
+    '-',
+    0, /* Left Arrow */
+    0,
+    0, /* Right Arrow */
+    '+',
+    0, /* 79 - End key*/
+    0, /* Down Arrow */
+    0, /* Page Down */
+    0, /* Insert Key */
+    0, /* Delete Key */
+    0,
+    0,
+    0,
+    0, /* F11 Key */
+    0, /* F12 Key */
+    0, /*Restante fica zerado */
+};
+
 extern void keyboard_handler_wrapper();
 
 void keyboard_handler()
@@ -152,22 +245,19 @@ void keyboard_handler()
     // Ignora o momento de soltar a tecla por enquanto (valores maiores que 0x80).
     if (!(scancode & 0x80))
     {
+        char c = keyboard_map[scancode];
 
         // Tradutor básico (Keymap):
-        // Arquitetura IBM PC, o Scan Code 0x1E é a tecla 'A'
-        if (scancode == 0x1E)
+        if (c != 0)
         {
-            print_string("A");
-        }
-        // O Scan Code 0x30 é a tecla 'B'
-        else if (scancode == 0x30)
-        {
-            print_string("B");
-        }
-        // Se for qualquer outra tecla, imprime um ponto
-        else
-        {
-            print_string(".");
+            if (c == '\b')
+            {
+                // TODO: Pendente criar driver para remover caracteres
+            }
+            else
+            {
+                print_char(c);
+            }
         }
     }
 
@@ -284,7 +374,7 @@ void kernel_main()
 {
     clear_screen();
 
-    print_string("Iniciando subsistema de interrucoes...\n");
+    print_string("Iniciando subsistema de interrupcoes...\n");
 
     // 1. Reprograma o chip controlador para não conflitar com a CPU
     pic_reprogram();
@@ -303,7 +393,7 @@ void kernel_main()
     idt_set_gate(33, (unsigned int)keyboard_handler_wrapper, 0x08, 0x8E);
     print_string("Teclado e Relogio mapeados na IDT!\n");
 
-    print_string("Digite algo no teclado\n");
+    print_string("Digite algo no teclado:\n");
 
     // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");

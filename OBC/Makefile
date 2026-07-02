@@ -33,7 +33,7 @@ stage2.o: $(STAGE2_SRC)
 	$(NASM) -f elf32 $(STAGE2_SRC) -o stage2.o
 
 kernel.o: $(KERNEL_SRC)
-	$(CC) -m32 -ffreestanding -fno-pic -c $(KERNEL_SRC) -o kernel.o
+	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -c $(KERNEL_SRC) -o kernel.o
 
 # Compila o ASM
 $(STAGE2_BIN): stage2.o kernel.o
