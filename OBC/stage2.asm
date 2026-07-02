@@ -137,7 +137,10 @@ print_msg:
 
 [bits 32]
 extern keyboard_handler     ; Avisa que a função real em C está no kernel.c
+extern timer_handler            ; Função do relógio em C
+
 global keyboard_handler_wrapper ; Torna o capturador visível para o Linker colar na IDT
+global timer_handler_wrapper    ; Torna visível para o Linker colar na IDT
 
 init_32bit:
     ; Agora estamos em Modo Protegido!
@@ -150,8 +153,8 @@ init_32bit:
     mov gs, ax
 
     ; Atualizar a pilha para um local seguro de 32 bits
-    mov ebp, 0x90000
-    mov esp, ebp
+    mov esp, 0x7C00             ; Base da pilha logo abaixo do bootloader
+    mov ebp, esp                ; Alinha o Frame Pointer
 
     ; Escrever algo diretamente na tela para testar!
     ; Em 32 bits não temos 'int 10h', escrevemos direto na memória de vídeo (0xB8000)
@@ -163,7 +166,7 @@ init_32bit:
         hlt          ; Coloca a CPU em estado de "dormir" (Halt) até receber um sinal externo
         jmp .freeze  ; Se por algum motivo ela acordar, faz dormir de novo
 
-; Captura Interrupcao do Teclado (0 Wrapper)
+; Captura Interrupcao do Teclado (1 Wrapper)
 keyboard_handler_wrapper:
     pusha               ; Salva todos os registradores gerais (EAX, ECX, etc) na pilha
 
@@ -171,6 +174,14 @@ keyboard_handler_wrapper:
 
     popa                ; Restaura todos os registradores originais
     iretd               ; Instrução especial: Retorna da interrupção em 32 bits
+
+; Captura Interrupcao do Teclado (0 Wrapper)
+timer_handler_wrapper:
+    pusha
+    call timer_handler    ; Chama a nova função exclusiva do relógio em C
+    popa
+    iretd
+
 
 msg                 db "Stage 2 carregado...", 13, 10, 0
 msgErroNaoSuporta   db "Erro: BIOS nao suporta A20", 13, 10, 0

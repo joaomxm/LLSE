@@ -175,6 +175,39 @@ void keyboard_handler()
     // Enviar o byte 0x20 para a porta do PIC Master (0x20) para notificar o PIC que a CPU nao esta processando
     outb(0x20, 0x20);
 }
+
+/*
+=============================================================================
+HANDLER DO RELOGIO
+=============================================================================
+*/
+
+extern void timer_handler_wrapper();
+unsigned int timer_ticks = 0;
+
+void timer_handler()
+{
+    timer_ticks++;
+
+    // Endereço linear: (0 * 80 + 79) * 2 = 158 - para adicionar caractere para animacao
+    char *video_memory = (char *)VIDEO_ADDRESS;
+
+    // Adiciona animação simples usando os ticks (exibe '/' ou '-')
+    if (timer_ticks & 0x20)
+    {
+        video_memory[158] = '/';
+        video_memory[159] = 0x0E; // Texto amarelo
+    }
+    else
+    {
+        video_memory[158] = '-';
+        video_memory[159] = 0x0E;
+    }
+
+    // Notifica o PIC Master que a interrupcao do relogio acabou
+    outb(0x20, 0x20);
+}
+
 /*
 =============================================================================
 DRIVERS DE VIDEO - VGA
@@ -261,16 +294,19 @@ void kernel_main()
     idt_init();
     print_string("-> IDT carregada no processador.\n\n");
 
-    // REGISTRO DO TECLADO NA IDT:
+    // REGISTRO DO TECLADO e RELOGIO NA IDT:
+    // Adicionar o wrapper do relogio na linha 32 da tabela.
     // Adicionar o wrapper do teclado na linha 33 da tabela.
     // 0x08 é o seletor de código da GDT (CODE_SEG).
     // 0x8E define um portão de interrupção ativo com privilégio de Kernel.
+    idt_set_gate(32, (unsigned int)timer_handler_wrapper, 0x08, 0x8E);
     idt_set_gate(33, (unsigned int)keyboard_handler_wrapper, 0x08, 0x8E);
     print_string("Teclado e Relogio mapeados na IDT!\n");
 
-    // O COMANDO FINAL: Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
+    print_string("Digite algo no teclado\n");
+
+    // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");
-    print_string("DIGITE ALGO NO TECLADO:\n> ");
 
     while (1)
     {
