@@ -136,6 +136,9 @@ print_msg:
 
 
 [bits 32]
+extern keyboard_handler     ; Avisa que a função real em C está no kernel.c
+global keyboard_handler_wrapper ; Torna o capturador visível para o Linker colar na IDT
+
 init_32bit:
     ; Agora estamos em Modo Protegido!
     ; Precisamos atualizar todos os outros registradores de segmento com o DATA_SEG
@@ -159,6 +162,15 @@ init_32bit:
     .freeze:
         hlt          ; Coloca a CPU em estado de "dormir" (Halt) até receber um sinal externo
         jmp .freeze  ; Se por algum motivo ela acordar, faz dormir de novo
+
+; Captura Interrupcao do Teclado (0 Wrapper)
+keyboard_handler_wrapper:
+    pusha               ; Salva todos os registradores gerais (EAX, ECX, etc) na pilha
+
+    call keyboard_handler ; Pula para o C para processar o teclado de verdade
+
+    popa                ; Restaura todos os registradores originais
+    iretd               ; Instrução especial: Retorna da interrupção em 32 bits
 
 msg                 db "Stage 2 carregado...", 13, 10, 0
 msgErroNaoSuporta   db "Erro: BIOS nao suporta A20", 13, 10, 0

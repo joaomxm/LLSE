@@ -40,7 +40,7 @@ Quando acontece uma Interrupção (erro divisao por zero, tecla pressionada...),
 a CPU usa o numero da interrupcao como indice nessa tabela para salta direto para a funcao correspondente.
 
 - Offset (Bits 0-15 e 16-31): O endereço de memória da função em C que vai tratar a interrupção. Ele fica dividido em duas partes na estrutura por motivos históricos de compatibilidade.
-- Selector (Bits 16-31): O segmento de código da GDT (o nosso CODE_SEG do Stage 2).
+- Selector (Bits 16-31): O segmento de código da GDT (o CODE_SEG do Stage 2).
 - Flags (Bits 40-47): Define se o portão está ativo, o nível de privilégio (Ring 0) e o tipo de portão (geralmente 0x8E para portões de interrupção de 32 bits).
 */
 
@@ -136,6 +136,47 @@ void idt_init()
 
 /*
 =============================================================================
+HANDLER DO TECLADO
+=============================================================================
+*/
+
+extern void keyboard_handler_wrapper();
+
+void keyboard_handler()
+{
+    // 1. Lê o "Scan Code" (código bruto da tecla) na porta 0x60
+    unsigned char scancode = inb(0x60);
+
+    // O chip do teclado envia um sinal quando a tecla é pressionada (bit 7 zerado)
+    // e outro sinal quando ela é solta (bit 7 ativado, ou seja, valor maior que 0x80).
+    // Ignora o momento de soltar a tecla por enquanto (valores maiores que 0x80).
+    if (!(scancode & 0x80))
+    {
+
+        // Tradutor básico (Keymap):
+        // Arquitetura IBM PC, o Scan Code 0x1E é a tecla 'A'
+        if (scancode == 0x1E)
+        {
+            print_string("A");
+        }
+        // O Scan Code 0x30 é a tecla 'B'
+        else if (scancode == 0x30)
+        {
+            print_string("B");
+        }
+        // Se for qualquer outra tecla, imprime um ponto
+        else
+        {
+            print_string(".");
+        }
+    }
+
+    // 2. AVISO CRÍTICO DE FIM DE INTERRUPÇÃO (EOI - End of Interrupt)
+    // Enviar o byte 0x20 para a porta do PIC Master (0x20) para notificar o PIC que a CPU nao esta processando
+    outb(0x20, 0x20);
+}
+/*
+=============================================================================
 DRIVERS DE VIDEO - VGA
 =============================================================================
 */
@@ -220,7 +261,16 @@ void kernel_main()
     idt_init();
     print_string("-> IDT carregada no processador.\n\n");
 
-    print_string("Sistema preparado! Aguardando mapeamento dos Handlers.");
+    // REGISTRO DO TECLADO NA IDT:
+    // Adicionar o wrapper do teclado na linha 33 da tabela.
+    // 0x08 é o seletor de código da GDT (CODE_SEG).
+    // 0x8E define um portão de interrupção ativo com privilégio de Kernel.
+    idt_set_gate(33, (unsigned int)keyboard_handler_wrapper, 0x08, 0x8E);
+    print_string("Teclado e Relogio mapeados na IDT!\n");
+
+    // O COMANDO FINAL: Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
+    __asm__ volatile("sti");
+    print_string("DIGITE ALGO NO TECLADO:\n> ");
 
     while (1)
     {
