@@ -6,6 +6,8 @@ SECTIONS
     /* O código começará exatamente em 0x7E00 */
     . = 0x7E00;
 
+    _kernel_start = .; /* Guarda o endereco de inicio do kernel*/
+
     /* Primeiro, coloca o código de boot do Stage 2 */
     .text : ALIGN(16){
         *(.text)
@@ -26,4 +28,6 @@ SECTIONS
         *(COMMON)
         *(.bss)
     }
+
+    _kernel_end = .; /* Guarda o endereco do fim do kernel*/
 }

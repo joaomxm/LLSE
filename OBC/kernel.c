@@ -6,6 +6,140 @@
 
 int cursor_x;
 int cursor_y;
+
+// =============================================================================
+// GERENCIADOR DE MEMÓRIA FÍSICA (PMM - BITMAP)
+// =============================================================================
+
+extern unsigned int _kernel_start;
+extern unsigned int _kernel_end;
+
+#define BLOCK_SIZE 4096                             // Bloco de memoria de 4KB
+#define RAM_MAX_SIZE 0x2000000                      // Simula um limite de 32MB de RAM
+#define BITMAP_SIZE (RAM_MAX_SIZE / BLOCK_SIZE / 8) // Tamanho do bitmap em bytes (256 bytes)
+
+// // Array do bitmap (inicia com tudo 1 = Ocupado por seguranca)
+unsigned char pmm_bitmap[BITMAP_SIZE];
+
+// Funcao para setar um bit (1 = Ocupado)
+void pmm_set_bit(unsigned int block_index)
+{
+    unsigned int byte = block_index / 8;
+    unsigned int bit = block_index % 8;
+    pmm_bitmap[byte] != (1 << bit);
+}
+
+// Funcao para limpar um bit (0 = livre)
+void pmm_clear_bit(unsigned int block_index)
+{
+    unsigned int byte = block_index / 8;
+    unsigned int bit = block_index % 8;
+    pmm_bitmap[byte] &= ~(1 << bit);
+}
+
+// Funcao para ler o estado de um bit
+int pmm_test_bit(unsigned int block_index)
+{
+    unsigned int byte = block_index / 8;
+    unsigned int bit = block_index % 8;
+    return (pmm_bitmap[byte] & (1 << bit)) != 0;
+}
+
+// Inicializa o gerenciador marcando o que é livre e o que é Kernel
+void pmm_init()
+{
+    // 1. Inicialmente, assume que toda a memória está ocupada (setada em 1)
+    for (int i = 0; i < BITMAP_SIZE; i++)
+    {
+        pmm_bitmap[i] = 0xFF;
+    }
+
+    // 2. Libera a memória RAM padrão (de 1MB até 32MB)
+    // Os primeiros 1MB (0x000000 a 0x100000) são reservados para hardware/VGA da BIOS, deixa bloqueados.
+    unsigned int start_block = 0x100000 / BLOCK_SIZE; // Bloco correspondente a 1MB
+    unsigned int end_block = RAM_MAX_SIZE / BLOCK_SIZE;
+
+    for (unsigned int i = start_block; i < end_block; i++)
+    {
+        pmm_clear_bit(i); // Marca como LIVRE (0)
+    }
+
+    // 3. Bloqueia a área exata onde o Kernel está rodando na RAM para proteção
+    unsigned int kernel_start_block = ((unsigned int)&_kernel_start) / BLOCK_SIZE;
+    unsigned int kernel_end_block = (((unsigned int)&_kernel_end) / BLOCK_SIZE) + 1;
+
+    for (unsigned int i = kernel_start_block; i < kernel_end_block; i++)
+    {
+        pmm_set_bit(i); // Marca como OCUPADO (1) - Proteção do Kernel!
+    }
+}
+
+// Aloca o primeiro bloco de 4KB livre que encontrar - malloc fisico
+void *pmm_alloc_block()
+{
+    unsigned int total_blocks = RAM_MAX_SIZE / BLOCK_SIZE;
+
+    for (unsigned int i = 0; i < total_blocks; i++)
+    {
+        if (pmm_test_bit(i) == 0)
+        {                   // Encontrou um bloco livre!
+            pmm_set_bit(i); // Marca como ocupado agora
+            unsigned int addr = i * BLOCK_SIZE;
+            return (void *)addr; // Retorna o endereço real de memória RAM de 4KB
+        }
+    }
+    return 0; // Out of Memory (RAM cheia!)
+}
+
+// Libera um bloco de volta para o sistema - free fisico
+void pmm_free_block(void *p)
+{
+    unsigned int addr = (unsigned int)p;
+    unsigned int block_index = addr / BLOCK_SIZE;
+    pmm_clear_bit(block_index); // Marca como livre no Bitmap
+}
+
+// =============================================================================
+// GERENCIADOR DE MEMÓRIA VIRTUAL (PAGINAÇÃO)
+// =============================================================================
+
+// Alinha as tabelas em fronteiras de 4KB (Obrigatório para o processador!)
+unsigned int page_directory[1024] __attribute__((aligned(4096)));
+unsigned int first_page_table[1024] __attribute__((aligned(4096)));
+
+void paging_init()
+{
+    // 1. Preenche todo o Page Directory com entradas vazias (Não Presentes)
+    // O valor 0x02 significa: Não Presente, mas com permissão de Escrita/Leitura
+    for (int i = 0; i < 1024; i++)
+    {
+        page_directory[i] = 0x00000002;
+    }
+
+    // 2. Mapeia o primeiro megabyte de memória (Identity Mapping)
+    // Isso vai cobrir do endereço 0x00000000 até 0x003FFFFF (4MB de RAM)
+    // Garante que o Kernel, a pilha e a VGA continuem no mesmo lugar virtual
+    for (unsigned int i = 0; i < 1024; i++)
+    {
+        // Assegura o endereço físico real associado às flags (0x03 = Presente + Escrita)
+        first_page_table[i] = (i * 4096) | 3;
+    }
+
+    // 3. Coloca a nossa primeira Page Table na primeira posição do Page Directory
+    // O endereço da tabela precisa das flags de controle também (0x03)
+    page_directory[0] = ((unsigned int)first_page_table) | 3;
+
+    // 4. ATIVAÇÃO NO PROCESSADOR (Mágica do Assembly)
+    // Carrega o endereço do Page Directory no registrador de controle CR3
+    __asm__ volatile("mov %0, %%cr3" : : "r"(page_directory));
+
+    // Lê o registrador CR0, ativa o bit mais alto (Bit 31 - PG / Paging) e grava de volta
+    unsigned int cr0;
+    __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
+    cr0 |= 0x80000000; // Bit 31 ativa a paginação
+    __asm__ volatile("mov %0, %%cr0" : : "r"(cr0));
+}
+
 /*
 =============================================================================
 FUNÇÕES DE PORTA I/O (Conversa direta com os Chips)
@@ -393,10 +527,28 @@ void kernel_main()
     idt_set_gate(33, (unsigned int)keyboard_handler_wrapper, 0x08, 0x8E);
     print_string("Teclado e Relogio mapeados na IDT!\n");
 
-    print_string("Digite algo no teclado:\n");
+    pmm_init();
+    print_string("-> Gerenciador de Memoria Fisica (PMM Bitmap) ativo.\n");
+
+    void *bloco1 = pmm_alloc_block();
+    void *bloco2 = pmm_alloc_block();
+
+    if (bloco1 != 0 && bloco2 != 0)
+    {
+        print_string("-> Sucesso! Bloco 1 alocado em: ");
+        print_string("Endereco Valido.\n");
+    }
+
+    // Devolve o bloco 1 para a RAM
+    pmm_free_block(bloco1);
+    print_string("-> Bloco 1 liberado de volta para a RAM com sucesso.\n\n");
+
+    paging_init();
+    print_string("-> Pagiancao Virtual de 32-bits ligada com sucesso!\n\n");
 
     // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");
+    print_string("Digite algo:\n> ");
 
     while (1)
     {

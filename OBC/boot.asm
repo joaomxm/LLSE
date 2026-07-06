@@ -34,7 +34,7 @@ go_stage_two:
     mov ah, 02h ; Na funcao de Leitura de setores do drive
     ;Parametros da Funcao 02h
     mov dl, 80h ; Selecione o primeiro Disco Rigido configurado
-    mov al, 4 ; numero de Setores para ler
+    mov al, 8 ; numero de Setores para ler
     mov ch, 0 ; Cilindro
     mov cl, 2 ; Numero do Setor -  A MBR é o setor 1
     mov dh, 0 ; Cabeca de leitura;

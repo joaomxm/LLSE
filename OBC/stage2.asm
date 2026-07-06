@@ -223,5 +223,9 @@ gdt_descriptor:
 
 
 ;equ -> Ele funciona apenas como um "Localizar e Substituir", pedir ao NASM toda vez que você encontrar a palavra CODE_SEG no meu código, substitua-a pelo número 8 antes de gerar o arquivo final"
-CODE_SEG equ gdt_code - gdt_start ; Geralmente resulta em 0x08
-DATA_SEG equ gdt_data - gdt_start ; Geralmente resulta em 0x10
+; CODE_SEG equ gdt_code - gdt_start ; Geralmente resulta em 0x08
+; DATA_SEG equ gdt_data - gdt_start ; Geralmente resulta em 0x10
+
+
+CODE_SEG equ 0x08
+DATA_SEG equ 0x10
