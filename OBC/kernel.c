@@ -1,3 +1,4 @@
+#include "util.h"
 
 // Definicoes do tamanho da tela -> 25 colunas por 80 linhas = 2000
 #define SCREEN_WIDTH 80
@@ -19,14 +20,14 @@ extern unsigned int _kernel_end;
 #define BITMAP_SIZE (RAM_MAX_SIZE / BLOCK_SIZE / 8) // Tamanho do bitmap em bytes (256 bytes)
 
 // // Array do bitmap (inicia com tudo 1 = Ocupado por seguranca)
-unsigned char pmm_bitmap[BITMAP_SIZE];
+volatile unsigned char pmm_bitmap[BITMAP_SIZE];
 
 // Funcao para setar um bit (1 = Ocupado)
 void pmm_set_bit(unsigned int block_index)
 {
     unsigned int byte = block_index / 8;
     unsigned int bit = block_index % 8;
-    pmm_bitmap[byte] != (1 << bit);
+    pmm_bitmap[byte] |= (1 << bit);
 }
 
 // Funcao para limpar um bit (0 = livre)
@@ -79,7 +80,9 @@ void *pmm_alloc_block()
 {
     unsigned int total_blocks = RAM_MAX_SIZE / BLOCK_SIZE;
 
-    for (unsigned int i = 0; i < total_blocks; i++)
+    unsigned int start_search_block = 0x100000 / BLOCK_SIZE;
+
+    for (unsigned int i = start_search_block; i < total_blocks; i++)
     {
         if (pmm_test_bit(i) == 0)
         {                   // Encontrou um bloco livre!
@@ -532,12 +535,18 @@ void kernel_main()
 
     void *bloco1 = pmm_alloc_block();
     void *bloco2 = pmm_alloc_block();
+    void *bloco3 = pmm_alloc_block();
 
     if (bloco1 != 0 && bloco2 != 0)
     {
         print_string("-> Sucesso! Bloco 1 alocado em: ");
         print_string("Endereco Valido.\n");
     }
+
+    int teste_numero = 12345;
+
+    printf("-> [PRINTF TEST] Numero: %d | Bloco1: 0x%x | Bloco2: 0x%x | Bloco3: 0x%x\n\n",
+           teste_numero, (unsigned int)bloco1, (unsigned int)bloco2, (unsigned int)bloco3);
 
     // Devolve o bloco 1 para a RAM
     pmm_free_block(bloco1);
