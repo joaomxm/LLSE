@@ -35,9 +35,12 @@ stage2.o: $(STAGE2_SRC)
 kernel.o: $(KERNEL_SRC)
 	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -c $(KERNEL_SRC) -o kernel.o
 
+util.o: util.c util.h
+	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -c util.c -o util.o
+
 # Compila o ASM
-$(STAGE2_BIN): stage2.o kernel.o
-	$(LD) -m elf_i386 -T linker.ld stage2.o kernel.o -o $(STAGE2_BIN)
+$(STAGE2_BIN): stage2.o kernel.o util.o
+	$(LD) -m elf_i386 -T linker.ld stage2.o kernel.o util.o -o $(STAGE2_BIN) --oformat binary
 
 # Executa no QEMU
 run: $(IMAGE)
