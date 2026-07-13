@@ -4,9 +4,14 @@
 #define SCREEN_WIDTH 80
 #define SCREEN_HEIGHT 25
 #define VIDEO_ADDRESS 0xB8000 // Endereço inicial de video
+#define INPUT_BUFFER_SIZE 256
 
 int cursor_x;
 int cursor_y;
+
+char input_buffer[INPUT_BUFFER_SIZE];
+int input_index = 0;
+volatile int line_ready = 0;
 
 // =============================================================================
 // GERENCIADOR DE MEMÓRIA FÍSICA (PMM - BITMAP)
@@ -128,7 +133,7 @@ void paging_init()
         first_page_table[i] = (i * 4096) | 3;
     }
 
-    // 3. Coloca a nossa primeira Page Table na primeira posição do Page Directory
+    // 3. Coloca a primeira Page Table na primeira posição do Page Directory
     // O endereço da tabela precisa das flags de controle também (0x03)
     page_directory[0] = ((unsigned int)first_page_table) | 3;
 
@@ -384,16 +389,27 @@ void keyboard_handler()
     {
         char c = keyboard_map[scancode];
 
-        // Tradutor básico (Keymap):
-        if (c != 0)
+        if (c == '\n')
         {
-            if (c == '\b')
+            input_buffer[input_index] = '\0'; // Finaliza a string de forma segura
+            line_ready = 1;                   // Avisa o loop principal do Kernel
+            input_index = 0;                  // Reseta o índice para o próximo comando
+            print_string("\n");
+        }
+        else if (c == '\b')
+        {
+            if (input_index > 0)
             {
-                print_backspace();
+                input_index--;     // Remove do buffer lógico
+                print_backspace(); // Remove da tela física
             }
-            else
+        }
+        else if (c != 0)
+        {
+            if (input_index < INPUT_BUFFER_SIZE - 1)
             {
-                print_char(c);
+                input_buffer[input_index++] = c; // Guarda no buffer
+                print_char(c);                   // Mostra na tela
             }
         }
     }
@@ -401,6 +417,27 @@ void keyboard_handler()
     // 2. AVISO CRÍTICO DE FIM DE INTERRUPÇÃO (EOI - End of Interrupt)
     // Enviar o byte 0x20 para a porta do PIC Master (0x20) para notificar o PIC que a CPU nao esta processando
     outb(0x20, 0x20);
+}
+
+void read_line(char *out_buffer)
+{
+    line_ready = 0;
+    input_index = 0;
+
+    // Loop de espera ativa (Polling) esperando a interrupção do teclado setar 'line_ready'
+    while (line_ready == 0)
+    {
+        __asm__ volatile("hlt"); // Coloca a CPU em modo de baixo consumo até a próxima interrupção
+    }
+
+    // Copia o resultado do buffer global para o buffer de saída do usuário
+    int i = 0;
+    while (input_buffer[i] != '\0')
+    {
+        out_buffer[i] = input_buffer[i];
+        i++;
+    }
+    out_buffer[i] = '\0'; // Finaliza a string copiada
 }
 
 /*
@@ -572,10 +609,12 @@ void kernel_main()
 
     // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");
-    print_string("Digite algo:\n");
+    char comando[256];
 
     while (1)
     {
-        __asm__ volatile("hlt");
+        printf("OS_Kernel> ");
+        read_line(comando);
+        printf("O comando digitado foi: %s\n\n", comando);
     }
 }
