@@ -389,7 +389,7 @@ void keyboard_handler()
         {
             if (c == '\b')
             {
-                // TODO: Pendente criar driver para remover caracteres
+                print_backspace();
             }
             else
             {
@@ -501,6 +501,21 @@ void print_string(const char *str)
     }
 }
 
+void print_backspace()
+{
+    char *video_memory = (char *)VIDEO_ADDRESS;
+
+    // Se estiver algo na tela para ser apagado
+    if (cursor_x > 0)
+    {
+        cursor_x--; // Recua o cursor
+
+        int memory_offset = (cursor_y * SCREEN_WIDTH + cursor_x) * 2;
+        video_memory[memory_offset] = ' ';
+        video_memory[memory_offset + 1] = 0x07;
+    }
+}
+
 /*
 =============================================================================
 FUNÇÃO PRINCIPAL - SISTEMA
@@ -557,7 +572,7 @@ void kernel_main()
 
     // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");
-    print_string("Digite algo:\n> ");
+    print_string("Digite algo:\n");
 
     while (1)
     {
