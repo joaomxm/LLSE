@@ -15,6 +15,18 @@ QEMU    = qemu-system-i386
 CC 		= gcc
 LD		= ld
 
+CFLAGS = -m32 -ffreestanding -fno-pie -fno-stack-protector -c
+
+OBJ = stage2.o \
+      kernel.o \
+      util.o \
+      drivers/video.o \
+      drivers/keyboard.o \
+      memory/pmm.o \
+      memory/paging.o \
+      hardware/idt.o \
+      hardware/timer.o
+
 # Regra principal: compilar e rodar
 all: run
 
@@ -33,14 +45,35 @@ stage2.o: $(STAGE2_SRC)
 	$(NASM) -f elf32 $(STAGE2_SRC) -o stage2.o
 
 kernel.o: $(KERNEL_SRC)
-	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -c $(KERNEL_SRC) -o kernel.o
+	$(CC) $(CFLAGS) $(KERNEL_SRC) -o kernel.o
 
 util.o: util.c util.h
-	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -c util.c -o util.o
+	$(CC) $(CFLAGS) util.c -o util.o
+
+# Pasta Drivers
+drivers/video.o: drivers/video.c drivers/video.h
+	$(CC) $(CFLAGS) drivers/video.c -o drivers/video.o
+
+drivers/keyboard.o: drivers/keyboard.c drivers/keyboard.h hardware/io.h
+	$(CC) $(CFLAGS) drivers/keyboard.c -o drivers/keyboard.o
+
+# Pasta Memory
+memory/pmm.o: memory/pmm.c memory/pmm.h
+	$(CC) $(CFLAGS) memory/pmm.c -o memory/pmm.o
+
+memory/paging.o: memory/paging.c memory/paging.h
+	$(CC) $(CFLAGS) memory/paging.c -o memory/paging.o
+
+# Pasta Hardware
+hardware/idt.o: hardware/idt.c hardware/idt.h hardware/io.h
+	$(CC) $(CFLAGS) hardware/idt.c -o hardware/idt.o
+
+hardware/timer.o: hardware/timer.c hardware/timer.h hardware/io.h
+	$(CC) $(CFLAGS) hardware/timer.c -o hardware/timer.o
 
 # Compila o ASM
-$(STAGE2_BIN): stage2.o kernel.o util.o
-	$(LD) -m elf_i386 -T linker.ld stage2.o kernel.o util.o -o $(STAGE2_BIN) --oformat binary
+$(STAGE2_BIN): $(OBJ)
+	$(LD) -m elf_i386 -T linker.ld $(OBJ) -o $(STAGE2_BIN) --oformat binary
 
 # Executa no QEMU
 run: $(IMAGE)
@@ -50,4 +83,4 @@ run: $(IMAGE)
 
 # Limpeza: apaga os arquivos temporários
 clean:
-	rm -f $(BOOT_BIN) $(STAGE2_BIN) $(IMAGE) *.o
+	rm -f $(BOOT_BIN) $(STAGE2_BIN) $(IMAGE) *.o drivers/*.o memory/*.o hardware/*.o qemu.log
