@@ -22,6 +22,7 @@ OBJ = stage2.o \
       util.o \
       drivers/video.o \
       drivers/keyboard.o \
+	  drivers/uart.o \
       memory/pmm.o \
       memory/paging.o \
       hardware/idt.o \
@@ -57,6 +58,9 @@ drivers/video.o: drivers/video.c drivers/video.h
 drivers/keyboard.o: drivers/keyboard.c drivers/keyboard.h hardware/io.h
 	$(CC) $(CFLAGS) drivers/keyboard.c -o drivers/keyboard.o
 
+drivers/uart.o: drivers/uart.c drivers/uart.h hardware/io.h
+	$(CC) $(CFLAGS) drivers/uart.c -o drivers/uart.o
+
 # Pasta Memory
 memory/pmm.o: memory/pmm.c memory/pmm.h
 	$(CC) $(CFLAGS) memory/pmm.c -o memory/pmm.o
@@ -77,7 +81,7 @@ $(STAGE2_BIN): $(OBJ)
 
 # Executa no QEMU
 run: $(IMAGE)
-	$(QEMU) -drive file=$(IMAGE),format=raw,index=0,if=ide -display curses -d cpu_reset -D qemu.log
+	$(QEMU) -drive file=$(IMAGE),format=raw,index=0,if=ide -display curses -serial tcp:127.0.0.1:4555,server,nowait -d cpu_reset -D qemu.log
 
 
 

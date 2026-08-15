@@ -1,5 +1,6 @@
 #include "drivers/video.h"
 #include "drivers/keyboard.h"
+#include "drivers/uart.h"
 #include "hardware/idt.h"
 #include "hardware/timer.h"
 #include "memory/pmm.h"
@@ -57,14 +58,38 @@ void kernel_main()
     paging_init();
     print_string("-> Pagiancao Virtual de 32-bits ligada com sucesso!\n\n");
 
+    print_string("==================================================\n\n");
+    uart_init();
+    print_string("-> UART/Serial (COM1) inicializada a 115200 bps.\n\n");
+
+    uart_print("OBC_KERNEL: Subsistemas prontos em orbita");
+
     // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");
     char comando[256];
 
     while (1)
     {
-        printf("OS_Kernel> ");
-        read_line(comando);
-        printf("O comando digitado foi: %s\n\n", comando);
+
+        // Realiza a leitura dos dados do Serial
+        char c = uart_read_nonblocking();
+
+        if (c != 0)
+        {
+            // Exibe na tela o caractere e retorna uma mensagem de recebimento
+            if (c == '\r' || c == '\n')
+            {
+                print_char('\n');
+                uart_print("\r\n[OBC] Pacote recebido com sucesso.\r\n");
+            }
+            else
+            {
+                print_char(c);
+            }
+        }
+        // printf("OS_Kernel> ");
+        // read_line(comando);
+        // printf("O comando digitado foi: %s\n\n", comando);
+        __asm__ volatile("hlt");
     }
 }
