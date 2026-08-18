@@ -53,6 +53,12 @@ void print_char(char c)
         cursor_x = 0;
         cursor_y++;
     }
+
+    if (cursor_y >= SCREEN_HEIGHT)
+    {
+        scroll_screen();
+        cursor_y--;
+    }
 }
 
 void print_string(const char *str)
@@ -75,5 +81,16 @@ void print_backspace()
         int memory_offset = (cursor_y * SCREEN_WIDTH + cursor_x) * 2;
         video_memory[memory_offset] = ' ';
         video_memory[memory_offset + 1] = 0x07;
+    }
+}
+
+void scroll_screen()
+{
+    char *video_memory = (char *)VIDEO_ADDRESS;
+
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++)
+    {
+        video_memory[i * 2] = video_memory[(i * 2) + 160];
+        video_memory[i * 2 + 1] = 0x0F;
     }
 }
