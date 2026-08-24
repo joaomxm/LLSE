@@ -7,6 +7,8 @@
 #include "memory/paging.h"
 #include "util.h"
 #include "memory/heap.h"
+#include "shell/shell.h"
+#include "shell/command.h"
 
 extern void keyboard_handler_wrapper();
 extern void timer_handler_wrapper();

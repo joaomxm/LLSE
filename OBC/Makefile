@@ -27,7 +27,9 @@ OBJ = stage2.o \
       memory/paging.o \
       memory/heap.o \
       hardware/idt.o \
-      hardware/timer.o 
+      hardware/timer.o \
+	  shell/shell.o \
+	  shell/command.o \
 
 # Regra principal: compilar e rodar
 all: run
@@ -78,6 +80,12 @@ hardware/idt.o: hardware/idt.c hardware/idt.h hardware/io.h
 
 hardware/timer.o: hardware/timer.c hardware/timer.h hardware/io.h
 	$(CC) $(CFLAGS) hardware/timer.c -o hardware/timer.o
+
+shell/shell.o: shell/shell.c shell/shell.h 
+	$(CC) $(CFLAGS) shell/shell.c -o shell/shell.o
+
+shell/command.o: shell/command.c shell/command.h 
+	$(CC) $(CFLAGS) shell/command.c -o shell/command.o
 
 # Compila o ASM
 $(STAGE2_BIN): $(OBJ)

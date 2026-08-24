@@ -112,3 +112,69 @@ void printf(char *format, ...)
 
     va_end(args);
 }
+
+// Copia a string de origem (src) para o destino (dest) e retorna o destino
+char *strcpy(char *dest, const char *src)
+{
+    char *temp = dest;
+    while ((*dest++ = *src++) != '\0')
+        ;
+    return temp;
+}
+
+// Retorna o tamanho da string
+int strlen(char *str)
+{
+
+    int count = 0;
+    while (str[count] != '\0')
+    {
+        count++;
+    }
+    return count;
+}
+
+// Realiza a comparacao entre strings
+int strcmp(char *str1, char *str2)
+{
+    int str1_length = strlen(str1);
+    int str2_length = strlen(str2);
+
+    if (str1_length < str2_length)
+    {
+        return -1;
+    }
+    if (str1_length > str2_length)
+    {
+
+        return 1;
+    }
+
+    for (int i = 0; str1[i] != '\0'; i++)
+    {
+        if (str1[i] != str2[i])
+        {
+            if (str1[i] < str2[i])
+                return -1;
+            if (str1[i] > str2[i])
+                return 1;
+        }
+    }
+    return 0;
+}
+
+// Verifica se uma string esta em um array
+int find_string_array(char *target, char **array)
+{
+    int array_size = sizeof(array) / sizeof(array[0]);
+
+    for (int i = 0; i < array_size; i++)
+    {
+        if (strcmp(target, array[i]) == 0)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
