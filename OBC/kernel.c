@@ -6,6 +6,7 @@
 #include "memory/pmm.h"
 #include "memory/paging.h"
 #include "util.h"
+#include "memory/heap.h"
 
 extern void keyboard_handler_wrapper();
 extern void timer_handler_wrapper();
@@ -35,6 +36,9 @@ void kernel_main()
 
     pmm_init();
     print_string("-> Gerenciador de Memoria Fisica (PMM Bitmap) ativo.\n");
+
+    heap_init();
+    printf("-> Heap de Memoria (kmalloc) inicializado!\n\n");
 
     void *bloco1 = pmm_alloc_block();
     void *bloco2 = pmm_alloc_block();
@@ -67,6 +71,8 @@ void kernel_main()
     // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");
     char comando[256];
+    int tamanho = 0;
+    char *data_uart = (char *)kmalloc(16);
 
     while (1)
     {
@@ -79,17 +85,27 @@ void kernel_main()
             // Exibe na tela o caractere e retorna uma mensagem de recebimento
             if (c == '\r' || c == '\n')
             {
-                print_char('\n');
                 uart_print("\r\n[OBC] Pacote recebido com sucesso.\r\n");
             }
             else
             {
+                data_uart[tamanho] = c;
                 print_char(c);
+                tamanho++;
             }
         }
-        // printf("OS_Kernel> ");
-        // read_line(comando);
-        // printf("O comando digitado foi: %s\n\n", comando);
+        else
+        {
+            if (tamanho != NULL)
+            {
+                printf("\n[UART]: %s\n", data_uart);
+                kfree(data_uart);
+                tamanho = NULL;
+            }
+
+            read_command();
+        }
+
         __asm__ volatile("hlt");
     }
 }

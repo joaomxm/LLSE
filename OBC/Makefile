@@ -25,8 +25,9 @@ OBJ = stage2.o \
 	  drivers/uart.o \
       memory/pmm.o \
       memory/paging.o \
+      memory/heap.o \
       hardware/idt.o \
-      hardware/timer.o
+      hardware/timer.o 
 
 # Regra principal: compilar e rodar
 all: run
@@ -67,6 +68,9 @@ memory/pmm.o: memory/pmm.c memory/pmm.h
 
 memory/paging.o: memory/paging.c memory/paging.h
 	$(CC) $(CFLAGS) memory/paging.c -o memory/paging.o
+
+memory/heap.o: memory/heap.c memory/heap.h
+	$(CC) $(CFLAGS) memory/heap.c -o memory/heap.o
 
 # Pasta Hardware
 hardware/idt.o: hardware/idt.c hardware/idt.h hardware/io.h
