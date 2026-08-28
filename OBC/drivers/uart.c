@@ -1,10 +1,11 @@
 #include "uart.h"
 #include "../hardware/io.h"
+#include "../memory/ring_buffer.h"
 
 void uart_init()
 {
     // Desativa todas as interrupcoes da UART temporariamente durante a config
-    outb(PORT_COM1 + 1, 0x00);
+    outb(PORT_COM1 + 1, 0x00); // 0x00 desativa as interrupcoes, 0x01 ativa as interrupcoes
 
     // Ativa o DLAB (Divisor Latch Access Bit), permitindo definir a velocidade do Baud Rate
     outb(PORT_COM1 + 3, 0x80);
@@ -23,6 +24,15 @@ void uart_init()
 
     // Ativa os pinos DTR e RTS do circuito fisico para liberar o fluxo de hardware
     outb(PORT_COM1 + 4, 0x0B);
+
+    outb(PORT_COM1 + 1, 0x01); // 0x00 desativa as interrupcoes, 0x01 ativa as interrupcoes
+}
+
+void uart_handler()
+{
+    volatile char data = inb(PORT_COM1);
+    ring_buffer_put(data);
+    outb(0x20, 0x20); // EOI
 }
 
 // Verifica se há algum byte esperando para ser lido no registrador de status (Linha 5)

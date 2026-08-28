@@ -9,9 +9,11 @@
 #include "memory/heap.h"
 #include "shell/shell.h"
 #include "shell/command.h"
+#include "memory/ring_buffer.h"
 
 extern void keyboard_handler_wrapper();
 extern void timer_handler_wrapper();
+extern void uart_handler_wrapper();
 
 void kernel_main()
 {
@@ -34,6 +36,7 @@ void kernel_main()
     // 0x8E define um portão de interrupção ativo com privilégio de Kernel.
     idt_set_gate(32, (unsigned int)timer_handler_wrapper, 0x08, 0x8E);
     idt_set_gate(33, (unsigned int)keyboard_handler_wrapper, 0x08, 0x8E);
+    idt_set_gate(36, (unsigned int)uart_handler_wrapper, 0x08, 0x8E); // 0x24
     print_string("Teclado e Relogio mapeados na IDT!\n");
 
     pmm_init();
@@ -41,6 +44,9 @@ void kernel_main()
 
     heap_init();
     printf("-> Heap de Memoria (kmalloc) inicializado!\n\n");
+
+    ring_buffer_init();
+    printf("-> Buffer Circular inicializado!\n\n");
 
     void *bloco1 = pmm_alloc_block();
     void *bloco2 = pmm_alloc_block();
@@ -75,36 +81,31 @@ void kernel_main()
     char comando[256];
     int tamanho = 0;
     char *data_uart = (char *)kmalloc(16);
+    printf("OS_Kernel> ");
 
     while (1)
     {
 
-        // Realiza a leitura dos dados do Serial
-        char c = uart_read_nonblocking();
-
-        if (c != 0)
+        if (ring_buffer_empty() == 0)
         {
-            // Exibe na tela o caractere e retorna uma mensagem de recebimento
+            char c = ring_buffer_get();
+
             if (c == '\r' || c == '\n')
             {
                 uart_print("\r\n[OBC] Pacote recebido com sucesso.\r\n");
+
+                continue;
             }
             else
             {
                 data_uart[tamanho] = c;
-                print_char(c);
                 tamanho++;
+                continue;
             }
         }
-        else
-        {
-            if (tamanho != NULL)
-            {
-                printf("\n[UART]: %s\n", data_uart);
-                kfree(data_uart);
-                tamanho = NULL;
-            }
 
+        if (keyboard_buffer_ready())
+        {
             read_command();
         }
 

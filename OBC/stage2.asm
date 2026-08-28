@@ -138,9 +138,12 @@ print_msg:
 [bits 32]
 extern keyboard_handler     ; Avisa que a função real em C está no kernel.c
 extern timer_handler            ; Função do relógio em C
+extern uart_handler        ; Funcao handler da uart
 
 global keyboard_handler_wrapper ; Torna o capturador visível para o Linker colar na IDT
 global timer_handler_wrapper    ; Torna visível para o Linker colar na IDT
+global uart_handler_wrapper     ; Torna visível para o Linker colar na IDT
+
 
 init_32bit:
     ; Agora estamos em Modo Protegido!
@@ -179,6 +182,14 @@ keyboard_handler_wrapper:
 timer_handler_wrapper:
     pusha
     call timer_handler    ; Chama a nova função exclusiva do relógio em C
+    popa
+    iretd
+
+
+; Captura Interrupcao da UART (1 Wrapper)
+uart_handler_wrapper:
+    pusha
+    call uart_handler    ; Chama a nova função exclusiva do relógio em C
     popa
     iretd
 

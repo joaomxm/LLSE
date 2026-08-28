@@ -10,5 +10,6 @@ int uart_transmit_empty();
 void uart_write(char c);
 void uart_print(char *str);
 char uart_read_nonblocking();
+void uart_handler();
 
 #endif

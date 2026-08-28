@@ -162,3 +162,23 @@ void read_line(char *out_buffer)
     }
     out_buffer[i] = '\0'; // Finaliza a string copiada
 }
+
+int keyboard_buffer_ready()
+{
+    return line_ready;
+}
+
+void get_keyboard_buffer(char *out_buffer)
+{
+    line_ready = 0;
+    input_index = 0;
+
+    // Copia o resultado do buffer global para o buffer de saída do usuário
+    int i = 0;
+    while (input_buffer[i] != '\0')
+    {
+        out_buffer[i] = input_buffer[i];
+        i++;
+    }
+    out_buffer[i] = '\0'; // Finaliza a string copiada
+}

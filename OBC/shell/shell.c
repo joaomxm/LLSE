@@ -11,8 +11,7 @@ void read_command()
 {
     char *str_command = (char *)kmalloc(256); // 64 elementos
 
-    printf("OS_Kernel> ");
-    read_line(str_command);
+    get_keyboard_buffer(str_command);
 
     char **args = parse(str_command);
 
@@ -25,6 +24,8 @@ void read_command()
     }
 
     kfree(args);
+
+    printf("OS_Kernel> ");
 }
 
 // Realiza o parse da string do comando

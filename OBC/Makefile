@@ -26,6 +26,7 @@ OBJ = stage2.o \
       memory/pmm.o \
       memory/paging.o \
       memory/heap.o \
+	  memory/ring_buffer.o \
       hardware/idt.o \
       hardware/timer.o \
 	  shell/shell.o \
@@ -73,6 +74,9 @@ memory/paging.o: memory/paging.c memory/paging.h
 
 memory/heap.o: memory/heap.c memory/heap.h
 	$(CC) $(CFLAGS) memory/heap.c -o memory/heap.o
+
+memory/ring_buffer.o: memory/ring_buffer.c memory/ring_buffer.h
+	$(CC) $(CFLAGS) memory/ring_buffer.c -o memory/ring_buffer.o
 
 # Pasta Hardware
 hardware/idt.o: hardware/idt.c hardware/idt.h hardware/io.h

@@ -47,10 +47,10 @@ void pic_reprogram()
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
 
-    // Ativa apenas o Relógio (IRQ0) e o Teclado (IRQ1), mascarando/desativando o resto
+    // Ativa apenas o Relógio (IRQ0) e o Teclado (IRQ1), e IRQ4 (UART COM1) mascarando/desativando o resto
     // Bit 0 = IRQ0, Bit 1 = IRQ1. O valor 0 ativa e 1 desativa.
-    // 0xFC em binário é 11111100 (Ativa bits 0 e 1, desativa do 2 ao 7)
-    outb(0x21, 0xFC);
+    // 0xEC em binário é 11101100 (Ativa bits 0 e 1, desativa do 2 ao 7)
+    outb(0x21, 0xEC);
     outb(0xA1, 0xFF); // Desativa todas as IRQs do Slave
 }
 
