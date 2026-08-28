@@ -3,18 +3,35 @@
 #include "../drivers/uart.h"
 #include "../memory/heap.h"
 
+static command_entry_t command_table[];
+static int get_command_count();
+
+static command_entry_t command_table[] = {
+    {"ping", cmd_ping, "Verifica conectividade com o computador de bordo"},
+    {"clear", cmd_clear, "Realiza a limpeza do terminal"},
+    {"help", cmd_help, "Detalhes dos comandos disponiveis"}};
+
 void cmd_ping(int argc, char **args)
 {
     printf("[OBC] PONG! Satelite online e operando.\n");
     uart_print("\r\n[OBC] PONG! Satelite online e operando.\r\n");
 }
 
-static command_entry_t command_table[];
-static int get_command_count();
+void cmd_clear()
+{
+    clear_screen();
+}
 
-static command_entry_t command_table[] = {
-    {"ping", cmd_ping, "Verifica conectividade com o computador de bordo"},
-};
+void cmd_help()
+{
+    int num_commands = get_command_count();
+
+    printf("Comandos disponiveis:\n");
+    for (int i = 0; i < num_commands; i++)
+    {
+        printf("'%s' - (%s)\n", command_table[i].name, command_table[i].help);
+    }
+}
 
 static int get_command_count()
 {

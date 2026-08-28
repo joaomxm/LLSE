@@ -12,7 +12,8 @@ typedef struct
 } command_entry_t;
 
 void cmd_ping(int argc, char **args);
-
+void cmd_clear();
+void cmd_help();
 void command_execute(char **args);
 
 #endif
