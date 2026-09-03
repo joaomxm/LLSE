@@ -1,7 +1,7 @@
 #include "../drivers/video.h"
 #include "io.h"
 
-unsigned int timer_ticks = 0;
+static volatile unsigned int timer_ticks = 0;
 
 void timer_handler()
 {
@@ -24,4 +24,9 @@ void timer_handler()
 
     // Notifica o PIC Master que a interrupcao do relogio acabou
     outb(0x20, 0x20);
+}
+
+unsigned int get_timer_ticks()
+{
+    return timer_ticks;
 }
