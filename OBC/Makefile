@@ -31,6 +31,7 @@ OBJ = stage2.o \
       hardware/timer.o \
 	  shell/shell.o \
 	  shell/command.o \
+	  shell/kernel_fsm.o \
 
 # Regra principal: compilar e rodar
 all: run
@@ -90,6 +91,9 @@ shell/shell.o: shell/shell.c shell/shell.h
 
 shell/command.o: shell/command.c shell/command.h 
 	$(CC) $(CFLAGS) shell/command.c -o shell/command.o
+
+shell/kernel_fsm.o: shell/kernel_fsm.c shell/kernel_fsm.h 
+	$(CC) $(CFLAGS) shell/kernel_fsm.c -o shell/kernel_fsm.o
 
 # Compila o ASM
 $(STAGE2_BIN): $(OBJ)

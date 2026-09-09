@@ -10,6 +10,7 @@
 #include "shell/shell.h"
 #include "shell/command.h"
 #include "memory/ring_buffer.h"
+#include "shell/kernel_fsm.h"
 
 extern void keyboard_handler_wrapper();
 extern void timer_handler_wrapper();
@@ -18,6 +19,7 @@ extern void uart_handler_wrapper();
 void kernel_main()
 {
     clear_screen();
+    init_kernel_operation_mode_fsm();
 
     print_string("Iniciando subsistema de interrupcoes...\n");
 
@@ -75,6 +77,7 @@ void kernel_main()
     print_string("-> UART/Serial (COM1) inicializada a 115200 bps.\n\n");
 
     uart_print("OBC_KERNEL: Subsistemas prontos em orbita");
+    set_current_operation_mode_fsm(1);
 
     // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");

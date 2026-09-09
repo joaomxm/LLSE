@@ -37,6 +37,8 @@ void cmd_help()
 
 void cmd_stat()
 {
+    Operation_Mode current_operation_mode = get_current_operation_mode_fsm();
+
     Eletrical_Power_System eletrical_power_system = {
         +12.4, // V
         +1.8,  // A
@@ -57,7 +59,7 @@ void cmd_stat()
         16384, // bytes
         65536, // bytes
         3,
-        NOMINAL_MODE,
+        current_operation_mode,
     };
 
     Thermal_Subsystem thermal_subsystem = {

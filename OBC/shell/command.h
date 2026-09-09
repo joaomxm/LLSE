@@ -1,6 +1,7 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 #include "../util.h"
+#include "kernel_fsm.h"
 
 typedef void (*command_func_t)(int argc, char **args);
 
@@ -13,29 +14,22 @@ typedef struct
 
 typedef enum
 {
-    SAFE_MODE,    //: Desativa comandos pesados, mantém apenas a comunicação básica ligada (modo de economia de energia).
-    NOMINAL_MODE, //: Operação padrão; todos os comandos respondem normalmente.
-    PAYLOAD_MODE, //: Modo de coleta/execução de tarefas pesadas.
-} Operation_Mode;
-
-typedef enum
-{
     NADIR,
     SUN_TRACKING,
-    SPIN
+    SPIN,
 } Orientation_Mode;
 
 typedef enum
 {
     STANDBY,
-    ACTIVE
+    ACTIVE,
 } Magnetorquers_Status;
 
 typedef struct
 {
     float bus_voltage;
     float solar_array_current;
-    float battery_temperature
+    float battery_temperature;
 } Eletrical_Power_System;
 
 typedef struct
@@ -44,7 +38,7 @@ typedef struct
     float gyro_x;
     float gyro_y;
     float gyros_z;
-    Magnetorquers_Status magnetorquers_status
+    Magnetorquers_Status magnetorquers_status;
 } ADCS;
 
 typedef struct
@@ -63,18 +57,12 @@ typedef struct
     float transceptor_rf_temperature;
 } Thermal_Subsystem;
 
-const char *Operation_Mode_text[] = {
-    "SAFE_MODE",
-    "NOMINAL_MODE",
-    "PAYLOAD_MODE",
-};
-
-const char *Orientation_Mode_text[] = {
+static const char *Orientation_Mode_text[] = {
     "NADIR",
     "SUN_TRACKING",
     "SPIN",
 };
-const char *Magnetorquers_Status_text[] = {
+static const char *Magnetorquers_Status_text[] = {
     "STANDBY",
     "ACTIVE",
 
