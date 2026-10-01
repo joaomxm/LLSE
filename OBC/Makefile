@@ -23,6 +23,7 @@ OBJ = stage2.o \
       drivers/video.o \
       drivers/keyboard.o \
 	  drivers/uart.o \
+	  drivers/ipc.o \
       memory/pmm.o \
       memory/paging.o \
       memory/heap.o \
@@ -65,6 +66,9 @@ drivers/keyboard.o: drivers/keyboard.c drivers/keyboard.h hardware/io.h
 
 drivers/uart.o: drivers/uart.c drivers/uart.h hardware/io.h
 	$(CC) $(CFLAGS) drivers/uart.c -o drivers/uart.o
+
+drivers/ipc.o: drivers/ipc.c drivers/ipc.h hardware/io.h
+	$(CC) $(CFLAGS) drivers/ipc.c -o drivers/ipc.o
 
 # Pasta Memory
 memory/pmm.o: memory/pmm.c memory/pmm.h

@@ -1,5 +1,6 @@
 #include "ring_buffer.h"
 #include "../util.h"
+#include "../drivers/video.h"
 
 static RingBuffer ring_buffer;
 
@@ -13,7 +14,7 @@ void ring_buffer_init()
     ring_buffer.r_buffer = buffer;
 }
 
-void ring_buffer_put(char data)
+void ring_buffer_put(unsigned char data)
 {
 
     if (ring_buffer.count == BUFFER_SIZE)
@@ -26,15 +27,15 @@ void ring_buffer_put(char data)
     ring_buffer.count = ring_buffer.count + 1;
 }
 
-char ring_buffer_get()
+unsigned char ring_buffer_get()
 {
     if (ring_buffer.count == 0)
     {
         return 0;
     }
 
-    char data = ring_buffer.r_buffer[ring_buffer.read_index];
-    ring_buffer.read_index = (ring_buffer.read_index + 1) % BUFFER_SIZE;
+    unsigned char data = ring_buffer.r_buffer[ring_buffer.read_index];
+    ring_buffer.read_index = (ring_buffer.read_index + 1) & (BUFFER_SIZE - 1);
     ring_buffer.count = ring_buffer.count - 1;
 
     return data;

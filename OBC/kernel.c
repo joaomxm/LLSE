@@ -11,6 +11,7 @@
 #include "shell/command.h"
 #include "memory/ring_buffer.h"
 #include "shell/kernel_fsm.h"
+#include "drivers/ipc.h"
 
 extern void keyboard_handler_wrapper();
 extern void timer_handler_wrapper();
@@ -50,6 +51,8 @@ void kernel_main()
     ring_buffer_init();
     printf("-> Buffer Circular inicializado!\n\n");
 
+    ipc_init();
+
     void *bloco1 = pmm_alloc_block();
     void *bloco2 = pmm_alloc_block();
     void *bloco3 = pmm_alloc_block();
@@ -79,6 +82,10 @@ void kernel_main()
     uart_print("OBC_KERNEL: Subsistemas prontos em orbita");
     set_current_operation_mode_fsm(1);
 
+    // Inicializacao dos modulos;
+    shell_init();
+    print_string("-> Inicializando modulos\n\n");
+
     // Ativa as interrupções na CPU (Equivalente ao comando 'sti' em Assembly)
     __asm__ volatile("sti");
     char comando[256];
@@ -91,7 +98,7 @@ void kernel_main()
 
         if (ring_buffer_empty() == 0)
         {
-            char c = ring_buffer_get();
+            unsigned char c = ring_buffer_get();
 
             if (c == '\r' || c == '\n')
             {
@@ -101,11 +108,14 @@ void kernel_main()
             }
             else
             {
+                ipc_parser(c, tamanho);
                 data_uart[tamanho] = c;
                 tamanho++;
                 continue;
             }
         }
+
+        ipc_dispatch_all();
 
         if (keyboard_buffer_ready())
         {

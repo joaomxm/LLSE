@@ -152,28 +152,13 @@ void ftoa(float val, char *buf, int precision)
 }
 
 // Imprime um número em formato Hexadecimal direto na tela
-void print_hex(unsigned int n)
+void print_hex(unsigned char byte)
 {
-    if (n == 0)
-    {
-        print_char('0');
-        return;
-    }
+    const char hex_digits[] = "0123456789ABCDEF";
 
-    char hex_digits[] = "0123456789ABCDEF";
-    char buffer[8];
-    int i = 0;
-
-    while (n > 0)
-    {
-        buffer[i++] = hex_digits[n % 16];
-        n /= 16;
-    }
-
-    for (int j = i - 1; j >= 0; j--)
-    {
-        print_char(buffer[j]);
-    }
+    // Extrai o nibble alto (bits 7..4) e o nibble baixo (bits 3..0)
+    print_char(hex_digits[(byte >> 4) & 0x0F]);
+    print_char(hex_digits[byte & 0x0F]);
 }
 
 // Printf do kernel

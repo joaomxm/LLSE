@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <stddef.h>
+
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
@@ -11,7 +13,7 @@ typedef signed short int16_t;
 typedef signed int int32_t;
 typedef signed long long int64_t;
 
-void print_hex(unsigned int n);
+void print_hex(unsigned char byte);
 void print_int_dec(int n);
 void printf(char *format, ...);
 char *strcpy(char *dest, const char *src);

@@ -1,5 +1,5 @@
-#ifndef KERNEL_FSM
-#define KERNEL_FSM
+#ifndef KERNEL_FSM_H
+#define KERNEL_FSM_H
 
 typedef enum
 {
